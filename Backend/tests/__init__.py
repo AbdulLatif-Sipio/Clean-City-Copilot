@@ -1,0 +1,3 @@
+"""
+CleanCity Copilot Test Suite
+"""

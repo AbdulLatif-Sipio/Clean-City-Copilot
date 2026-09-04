@@ -1,0 +1,32 @@
+# Python Bytecode & Cache
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Virtual Environment
+venv/
+env/
+ENV/
+
+# Environment Variables & Secrets
+.env
+.env.local
+
+# SQLite Database
+*.db
+*.sqlite
+*.sqlite3
+cleancity.db
+
+# Media Storage (Uploaded citizen files)
+media/images/*
+media/audio/*
+!media/images/.gitkeep
+!media/audio/.gitkeep
+
+# IDE & OS Files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
