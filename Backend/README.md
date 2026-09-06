@@ -7,7 +7,7 @@ This repository contains the complete **Unified FastAPI Backend** featuring:
 - 🗄️ **Zero-Cost SQLite Database Layer** with Write-Ahead Logging (WAL) and composite spatial indexes.
 - 🌍 **Haversine Geo-Deduplication Engine** (50m radius / 48hr window).
 - 🤖 **Multimodal AI Integration Stubs** (Whisper Audio STT + Vision LLM with offline fallback).
-- 🏙️ **Built-in 3D Cyberpunk Web Dashboard** served directly at `http://127.0.0.1:8000/` and `http://127.0.0.1:8000/dashboard` without needing any separate frontend services!
+- 🏙️ **Built-in 3D Cyberpunk Web Dashboard** served directly at `http://127.0.0.1:8000/` and `http://127.0.0.1:8000/dashboard`
 - 📚 **Interactive Swagger API Docs** at `http://127.0.0.1:8000/docs`.
 
 ---
