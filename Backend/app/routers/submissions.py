@@ -51,9 +51,9 @@ HYDERABAD_LANDMARKS = {
 
 def notify_municipal_committee(ticket_id: str, category: str, severity: str, description: str, location_coords: str = "Hyderabad"):
     """Background utility to trigger automated email alert to the Municipal Committee."""
-    sender_email = "ahmedsyedfazeel95@gmail.com"  
-    sender_password = "cvsm aafq wgas cyes"   
-    receiver_email = "fazeels441@gmail.com" 
+    sender_email = "abc@gmail.com"  
+    sender_password = "YOUR_APP_PASSWORD_HERE" # Changed for security
+    receiver_email = "xyz@gmail.com" 
     
     print(f"📧 [DEBUG] Attempting to send email for ticket {ticket_id} from {sender_email} to {receiver_email}...")
     
