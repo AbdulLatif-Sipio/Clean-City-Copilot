@@ -1,5 +1,9 @@
 import logging
 from typing import Optional
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+
 from fastapi import APIRouter, Depends, Form, File, UploadFile, HTTPException, Request, status
 from sqlalchemy.orm import Session
 from slowapi import Limiter
@@ -45,6 +49,58 @@ HYDERABAD_LANDMARKS = {
 }
 
 
+def notify_municipal_committee(ticket_id: str, category: str, severity: str, description: str, location_coords: str = "Hyderabad"):
+    """Background utility to trigger automated email alert to the Municipal Committee."""
+    sender_email = "ahmedsyedfazeel95@gmail.com"  
+    sender_password = "cvsm aafq wgas cyes"   
+    receiver_email = "fazeels441@gmail.com" 
+    
+    print(f"📧 [DEBUG] Attempting to send email for ticket {ticket_id} from {sender_email} to {receiver_email}...")
+    
+    subject = f"🚨 URGENT: New Civic Ticket Generated [{ticket_id}] - {severity.upper()} Severity"
+    
+    body = f"""
+    Respected Municipal Authority,
+    
+    A new citizen complaint has been registered and triaged automatically by the CleanCity Copilot AI Engine.
+    
+    --------------------------------------------------
+    📌 Ticket ID: {ticket_id}
+    📂 Category: {category}
+    ⚠️ Severity: {severity}
+    📍 Location Coords: {location_coords}
+    
+    📝 Description / AI Summary:
+    {description}
+    --------------------------------------------------
+    
+    Please log in to the CleanCity Municipal Admin Dashboard to review and dispatch field units immediately.
+    
+    Regards,
+    CleanCity Copilot Automated Dispatch System
+    Alibaba Cloud AI Hackathon 2026
+    """
+    
+    try:
+        msg = MIMEMultipart()
+        msg['From'] = sender_email
+        msg['To'] = receiver_email
+        msg['Subject'] = subject
+        msg.attach(MIMEText(body, 'plain'))
+        
+        server = smtplib.SMTP('smtp.gmail.com', 587)
+        server.starttls()
+        server.login(sender_email, sender_password)
+        server.sendmail(sender_email, receiver_email, msg.as_string())
+        server.quit()
+        
+        print(f"✅ [SUCCESS] Municipal alert email successfully sent for ticket {ticket_id}!")
+        logger.info(f"Municipal alert email successfully sent for ticket {ticket_id}")
+    except Exception as e:
+        print(f"🔥 [SMTP ERROR] ASAL ERROR YEH HAI: {str(e)}")
+        logger.error(f"Failed to send email alert for {ticket_id}: {str(e)}")
+
+
 @router.post(
     "/submit-report",
     response_model=ReportSubmissionResponse,
@@ -65,7 +121,7 @@ async def submit_report(
     description: Optional[str] = Form(None, description="Optional manual text description"),
     db: Session = Depends(get_db)
 ):
-    # 1. Resolve and Validate Coordinates (Support latitude/longitude or lat/lng or address geocode)
+    # 1. Resolve and Validate Coordinates
     resolved_lat: Optional[float] = latitude
     resolved_lon: Optional[float] = longitude
 
@@ -81,7 +137,7 @@ async def submit_report(
         except ValueError:
             pass
 
-    # If coordinates are still missing, geocode from address string
+    # If coordinates are missing, geocode from address string
     if resolved_lat is None or resolved_lon is None:
         if address:
             addr_lower = address.lower()
@@ -92,7 +148,6 @@ async def submit_report(
                     matched = True
                     break
             if not matched:
-                # Default to Hyderabad City Center (Haider Chowk)
                 resolved_lat, resolved_lon = 25.392000, 68.358000
         else:
             resolved_lat, resolved_lon = 25.392000, 68.358000
@@ -117,7 +172,7 @@ async def submit_report(
     if audio and audio.filename and audio.size != 0:
         saved_audio_path = await save_uploaded_file(audio, is_image=False)
 
-    # 4. Invoke AI Engine (Audio STT -> Multimodal Vision & Logic)
+    # 4. Invoke AI Engine
     try:
         combined_text = description or address or ""
         ai_result = process_civic_submission(
@@ -146,7 +201,6 @@ async def submit_report(
         )
 
     if duplicate_ticket:
-        # Existing open ticket found within 50m! Merge this report.
         duplicate_ticket.duplicate_count += 1
         
         child_complaint = Complaint(
@@ -166,6 +220,15 @@ async def submit_report(
         )
         db.add(child_complaint)
         db.commit()
+
+        # UNCONDITIONAL EMAIL TRIGGER FOR DUPLICATE/MERGED TOO
+        notify_municipal_committee(
+            ticket_id=duplicate_ticket.ticket_id,
+            category=duplicate_ticket.category,
+            severity=duplicate_ticket.severity,
+            description=f"[Merged Report] {ai_result.translated_text or 'Duplicate report merged.'}",
+            location_coords=f"{resolved_lat}, {resolved_lon}"
+        )
 
         logger.info(f"Report merged into existing ticket {duplicate_ticket.ticket_id} (Duplicate count: {duplicate_ticket.duplicate_count})")
 
@@ -203,6 +266,15 @@ async def submit_report(
     db.add(new_complaint)
     db.commit()
     db.refresh(new_complaint)
+
+    # UNCONDITIONAL EMAIL TRIGGER FOR EVERY NEW TICKET
+    notify_municipal_committee(
+        ticket_id=new_ticket_id,
+        category=new_complaint.category,
+        severity=new_complaint.severity,
+        description=new_complaint.translated_text or "No description provided.",
+        location_coords=f"{resolved_lat}, {resolved_lon}"
+    )
 
     logger.info(f"New ticket created: {new_ticket_id} [Category: {new_complaint.category}, Severity: {new_complaint.severity}]")
 

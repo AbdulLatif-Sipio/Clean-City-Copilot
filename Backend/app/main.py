@@ -61,6 +61,7 @@ CleanCity Copilot bridges citizen submissions with municipal dispatch using:
     docs_url="/docs",
     redoc_url="/redoc"
 )
+app.mount("/media", StaticFiles(directory="media"), name="media")
 
 # Attach SlowAPI Rate Limiter to application state
 app.state.limiter = submissions.limiter

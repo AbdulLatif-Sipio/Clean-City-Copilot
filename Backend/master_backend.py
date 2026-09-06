@@ -355,9 +355,124 @@ def find_duplicate_ticket(
     return closest_candidate
 
 
+# # ======================================================================================
+# # 6. AI PIPELINE INTEGRATION STUBS & HEURISTICS (Whisper + Vision LLM)
+# # ======================================================================================
+# class AIAnalysisResult(BaseModel):
+#     is_valid_civic_issue: bool
+#     category: str
+#     severity: str
+#     reasoning: str
+#     ai_action_plan: str
+#     translated_text: Optional[str] = None
+#     raw_ai_response: Optional[Dict[str, Any]] = None
+
+
+# def transcribe_and_translate_audio(audio_path: Optional[str]) -> Optional[str]:
+#     """Integration stub for Whisper Speech-to-Text translation (Urdu/Roman Urdu -> English)."""
+#     if not audio_path or not os.path.exists(audio_path):
+#         return None
+    
+#     path_lower = audio_path.lower()
+#     if "pothole" in path_lower or "sarak" in path_lower or "road" in path_lower:
+#         return "Deep pothole on broken road causing hazard."
+#     elif "sewer" in path_lower or "gatar" in path_lower or "drain" in path_lower:
+#         return "Sewerage water overflowing from blocked drain."
+#     elif "garbage" in path_lower or "kachra" in path_lower:
+#         return "Reported overflowing garbage pile near the street corner requiring cleanup."
+
+#     return "Voice report describing civic issue requiring municipal cleanup."
+
+
+# def analyze_civic_issue(
+#     image_path: str,
+#     translated_text: Optional[str] = None,
+#     user_description: Optional[str] = None
+# ) -> AIAnalysisResult:
+#     """Multimodal Vision & Logic Classification with strict JSON schema."""
+#     combined_context = f"{translated_text or ''} {user_description or ''}".strip().lower()
+
+#     # Dynamic classification heuristic with mock fallback
+#     if "selfie" in combined_context or "blank" in combined_context or "fake" in combined_context or "spam" in combined_context:
+#         return AIAnalysisResult(
+#             is_valid_civic_issue=False,
+#             category="Unassigned",
+#             severity="Low",
+#             reasoning="Image flagged as unrelated to municipal civic infrastructure.",
+#             ai_action_plan="No municipal action required.",
+#             translated_text=translated_text or user_description
+#         )
+#     elif any(k in combined_context for k in ["garbage", "kachra", "trash", "waste", "dump", "debris", "litter"]):
+#         return AIAnalysisResult(
+#             is_valid_civic_issue=True,
+#             category="Garbage",
+#             severity="Critical" if any(k in combined_context for k in ["huge", "massive", "blocking", "severe"]) else "High",
+#             reasoning="Accumulated solid waste obstructing public area.",
+#             ai_action_plan="Requires 1 dump truck and 3 sanitation workers for 2 hours.",
+#             translated_text=translated_text or user_description
+#         )
+#     elif any(k in combined_context for k in ["pothole", "gaddha", "crater", "tooti hui", "tooti sarak", "broken road", "damaged road"]):
+#         return AIAnalysisResult(
+#             is_valid_civic_issue=True,
+#             category="Pothole",
+#             severity="Critical" if any(k in combined_context for k in ["deep", "huge", "dangerous", "severe", "broken"]) else "High",
+#             reasoning="Severe road fracture posing danger to traffic.",
+#             ai_action_plan="Requires 1 asphalt patcher truck and 2 road repair technicians.",
+#             translated_text=translated_text or user_description
+#         )
+#     elif any(k in combined_context for k in ["sewer", "gatar", "gutter", "drain", "sewage", "sewerage", "naali", "manhole", "ganda paani"]):
+#         return AIAnalysisResult(
+#             is_valid_civic_issue=True,
+#             category="Sewerage",
+#             severity="Critical",
+#             reasoning="Blocked sewerage line with contaminated water overflow.",
+#             ai_action_plan="Requires 1 suction jetting machine truck and 2 drainage specialists.",
+#             translated_text=translated_text or user_description
+#         )
+#     else:
+#         return AIAnalysisResult(
+#             is_valid_civic_issue=True,
+#             category="Garbage",
+#             severity="Medium",
+#             reasoning="Civic cleanliness concern reported in public area.",
+#             ai_action_plan="Requires sanitation inspection and standard clearance team.",
+#             translated_text=translated_text or user_description
+#         )
+
+
+# def process_civic_submission(
+#     image_path: str,
+#     audio_path: Optional[str] = None,
+#     user_description: Optional[str] = None
+# ) -> AIAnalysisResult:
+#     translated_audio_text = transcribe_and_translate_audio(audio_path) if audio_path else None
+#     final_text = translated_audio_text or user_description
+#     res = analyze_civic_issue(image_path=image_path, translated_text=final_text, user_description=user_description)
+#     if translated_audio_text and not res.translated_text:
+#         res.translated_text = translated_audio_text
+#     return res
+
+
+
 # ======================================================================================
-# 6. AI PIPELINE INTEGRATION STUBS & HEURISTICS (Whisper + Vision LLM)
+# 6. AI PIPELINE INTEGRATION (Whisper + Gemini 2.5 Flash via ai_engine.py)
 # ======================================================================================
+try:
+    from ai_engine import (
+        transcribe_audio as _engine_transcribe_audio,
+        analyze_civic_issue as _engine_analyze_civic_issue,
+    )
+    _AI_ENGINE_AVAILABLE = True
+    logger.info("ai_engine.py loaded successfully — real AI pipeline active.")
+except ImportError as _ai_engine_import_err:
+    _AI_ENGINE_AVAILABLE = False
+    logger.critical(
+        "FATAL: Could not import ai_engine.py: %s. "
+        "Real AI processing is unavailable. Check that ai_engine.py is in the same directory.",
+        _ai_engine_import_err,
+    )
+
+
 class AIAnalysisResult(BaseModel):
     is_valid_civic_issue: bool
     category: str
@@ -369,88 +484,131 @@ class AIAnalysisResult(BaseModel):
 
 
 def transcribe_and_translate_audio(audio_path: Optional[str]) -> Optional[str]:
-    """Integration stub for Whisper Speech-to-Text translation (Urdu/Roman Urdu -> English)."""
-    if not audio_path or not os.path.exists(audio_path):
-        return None
-    
-    path_lower = audio_path.lower()
-    if "pothole" in path_lower or "sarak" in path_lower or "road" in path_lower:
-        return "Deep pothole on broken road causing hazard."
-    elif "sewer" in path_lower or "gatar" in path_lower or "drain" in path_lower:
-        return "Sewerage water overflowing from blocked drain."
-    elif "garbage" in path_lower or "kachra" in path_lower:
-        return "Reported overflowing garbage pile near the street corner requiring cleanup."
+    """
+    Transcribes an audio file to text using Whisper via ai_engine.transcribe_audio().
 
-    return "Voice report describing civic issue requiring municipal cleanup."
+    Returns None if:
+      - audio_path is None or empty
+      - the file does not exist on disk
+      - ai_engine is unavailable
+      - transcription raises an exception
+    """
+    if not audio_path:
+        logger.debug("transcribe_and_translate_audio: audio_path is None — skipping.")
+        return None
+
+    if not os.path.exists(audio_path):
+        logger.warning(
+            "transcribe_and_translate_audio: audio file not found on disk: %s", audio_path
+        )
+        return None
+
+    if not _AI_ENGINE_AVAILABLE:
+        logger.error(
+            "transcribe_and_translate_audio: ai_engine unavailable — cannot transcribe %s", audio_path
+        )
+        return None
+
+    try:
+        transcript = _engine_transcribe_audio(audio_path)
+        logger.info("Audio transcribed successfully: %s", audio_path)
+        return transcript if transcript else None
+    except Exception as exc:
+        logger.exception(
+            "transcribe_and_translate_audio: Whisper transcription failed for %s: %s", audio_path, exc
+        )
+        return None
 
 
 def analyze_civic_issue(
     image_path: str,
     translated_text: Optional[str] = None,
-    user_description: Optional[str] = None
+    user_description: Optional[str] = None,
 ) -> AIAnalysisResult:
-    """Multimodal Vision & Logic Classification with strict JSON schema."""
-    combined_context = f"{translated_text or ''} {user_description or ''}".strip().lower()
+    """
+    Analyses a civic-issue image using Gemini 2.5 Flash via ai_engine.analyze_civic_issue().
 
-    # Dynamic classification heuristic with mock fallback
-    if "selfie" in combined_context or "blank" in combined_context or "fake" in combined_context or "spam" in combined_context:
+    The engine is expected to return a dict with at minimum:
+        is_valid_civic_issue (bool), category (str), severity (str),
+        reasoning (str), ai_action_plan (str)
+    and optionally: translated_text (str), raw_ai_response (dict).
+
+    Falls back to a safe default AIAnalysisResult on any failure.
+    """
+    text_description = translated_text or user_description or ""
+
+    if not _AI_ENGINE_AVAILABLE:
+        logger.error("analyze_civic_issue: ai_engine unavailable — returning safe fallback.")
         return AIAnalysisResult(
-            is_valid_civic_issue=False,
+            is_valid_civic_issue=True,
             category="Unassigned",
-            severity="Low",
-            reasoning="Image flagged as unrelated to municipal civic infrastructure.",
-            ai_action_plan="No municipal action required.",
-            translated_text=translated_text or user_description
+            severity="Unknown",
+            reasoning="AI engine unavailable; manual review required.",
+            ai_action_plan="Route to municipal supervisor for manual assessment.",
+            translated_text=text_description or None,
         )
-    elif any(k in combined_context for k in ["garbage", "kachra", "trash", "waste", "dump", "debris", "litter"]):
+
+    try:
+        raw: Dict[str, Any] = _engine_analyze_civic_issue(
+            image_path=image_path,
+            text_description=text_description,
+        )
+        logger.info("Gemini analysis completed for image: %s", image_path)
+
+        return AIAnalysisResult(
+            is_valid_civic_issue=bool(raw.get("is_valid_civic_issue", True)),
+            category=str(raw.get("category", "Unassigned")),
+            severity=str(raw.get("severity", "Unknown")),
+            reasoning=str(raw.get("reasoning", "No reasoning provided.")),
+            ai_action_plan=str(raw.get("ai_action_plan", "Refer to municipal department.")),
+            # Prefer engine-supplied translated_text; fall back to what the caller passed in.
+            translated_text=raw.get("translated_text") or text_description or None,
+            raw_ai_response=raw,
+        )
+
+    except Exception as exc:
+        logger.exception(
+            "analyze_civic_issue: Gemini analysis failed for %s: %s", image_path, exc
+        )
         return AIAnalysisResult(
             is_valid_civic_issue=True,
-            category="Garbage",
-            severity="Critical" if any(k in combined_context for k in ["huge", "massive", "blocking", "severe"]) else "High",
-            reasoning="Accumulated solid waste obstructing public area.",
-            ai_action_plan="Requires 1 dump truck and 3 sanitation workers for 2 hours.",
-            translated_text=translated_text or user_description
-        )
-    elif any(k in combined_context for k in ["pothole", "gaddha", "crater", "tooti hui", "tooti sarak", "broken road", "damaged road"]):
-        return AIAnalysisResult(
-            is_valid_civic_issue=True,
-            category="Pothole",
-            severity="Critical" if any(k in combined_context for k in ["deep", "huge", "dangerous", "severe", "broken"]) else "High",
-            reasoning="Severe road fracture posing danger to traffic.",
-            ai_action_plan="Requires 1 asphalt patcher truck and 2 road repair technicians.",
-            translated_text=translated_text or user_description
-        )
-    elif any(k in combined_context for k in ["sewer", "gatar", "gutter", "drain", "sewage", "sewerage", "naali", "manhole", "ganda paani"]):
-        return AIAnalysisResult(
-            is_valid_civic_issue=True,
-            category="Sewerage",
-            severity="Critical",
-            reasoning="Blocked sewerage line with contaminated water overflow.",
-            ai_action_plan="Requires 1 suction jetting machine truck and 2 drainage specialists.",
-            translated_text=translated_text or user_description
-        )
-    else:
-        return AIAnalysisResult(
-            is_valid_civic_issue=True,
-            category="Garbage",
-            severity="Medium",
-            reasoning="Civic cleanliness concern reported in public area.",
-            ai_action_plan="Requires sanitation inspection and standard clearance team.",
-            translated_text=translated_text or user_description
+            category="Unassigned",
+            severity="Unknown",
+            reasoning=f"AI analysis error — exception: {type(exc).__name__}. Manual review required.",
+            ai_action_plan="Route to municipal supervisor for manual assessment.",
+            translated_text=text_description or None,
         )
 
 
 def process_civic_submission(
     image_path: str,
     audio_path: Optional[str] = None,
-    user_description: Optional[str] = None
+    user_description: Optional[str] = None,
 ) -> AIAnalysisResult:
-    translated_audio_text = transcribe_and_translate_audio(audio_path) if audio_path else None
-    final_text = translated_audio_text or user_description
-    res = analyze_civic_issue(image_path=image_path, translated_text=final_text, user_description=user_description)
-    if translated_audio_text and not res.translated_text:
-        res.translated_text = translated_audio_text
-    return res
+    """
+    Orchestrates the full AI pipeline for a single civic submission:
+      1. Transcribe audio (if provided) → English text via Whisper.
+      2. Analyse the image + combined text context via Gemini 2.5 Flash.
+      3. Return a fully-populated AIAnalysisResult.
+    """
+    # Step 1: Audio transcription (None-safe — function guards internally)
+    translated_audio_text: Optional[str] = transcribe_and_translate_audio(audio_path)
+
+    # Step 2: Merge text sources; audio transcript takes priority over typed description
+    final_text: Optional[str] = translated_audio_text or user_description
+
+    # Step 3: Vision + LLM analysis
+    result: AIAnalysisResult = analyze_civic_issue(
+        image_path=image_path,
+        translated_text=final_text,
+        user_description=user_description,
+    )
+
+    # Step 4: Ensure translated_text is set if audio was transcribed but engine didn't echo it back
+    if translated_audio_text and not result.translated_text:
+        result.translated_text = translated_audio_text
+
+    return result
 
 
 # ======================================================================================
@@ -896,7 +1054,13 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc"
 )
-
+@app.get("/media/{file_path:path}")
+async def serve_media(file_path: str):
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    full_path = os.path.join(base_dir, "media", file_path)
+    if os.path.exists(full_path):
+        return FileResponse(full_path)
+    raise HTTPException(status_code=404, detail="Image not found on disk")
 # Rate limiter setup
 limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
